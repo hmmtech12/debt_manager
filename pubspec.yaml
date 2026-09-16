@@ -36,8 +36,7 @@ dependencies:
   intl: ^0.20.3
 
   # Local notifications (reminders)
-  flutter_local_notifications: ^17.2.2
-  timezone: ^0.9.4
+ 
 
   # Security
   flutter_secure_storage: ^9.2.2

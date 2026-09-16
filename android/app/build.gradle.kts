@@ -15,7 +15,7 @@ android {
     }
 
     defaultConfig {
-	isCoreLibraryDesugaringEnabled = true
+	
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.debt_manager"
         // You can update the following values to match your application needs.
@@ -48,4 +48,4 @@ kotlin {
 flutter {
     source = "../.."
 }
-dependencies { coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4") }
+

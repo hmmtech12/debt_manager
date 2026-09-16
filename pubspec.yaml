@@ -1,0 +1,72 @@
+name: debt_manager
+description: >
+  A privacy-focused, offline-first debt and lending tracker built around
+  Qard Hasan (interest-free loan) principles. Records what you owe and
+  what is owed to you — no interest, no APR, no penalties.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.5.1
+
+  # Local database (no code-gen required, keeps the project buildable out of the box)
+  sqflite: ^2.3.3+1
+  sqflite_common_ffi: ^2.3.4+4
+  sqflite_common_ffi_web: ^0.4.5+3
+  sqlite3_flutter_libs: ^0.5.24
+  path: ^1.9.0
+  path_provider: ^2.1.3
+
+  # Routing
+  go_router: ^14.2.0
+
+  # Charts (Reports screen)
+  fl_chart: ^0.68.0
+
+  # Formatting
+  intl: ^0.20.3
+
+  # Local notifications (reminders)
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
+
+  # Security
+  flutter_secure_storage: ^9.2.2
+  crypto: ^3.0.5
+
+  # Contacts (optional "pick from phone contacts" flow)
+  flutter_contacts: ^1.1.9+2
+
+  # Export / Import
+  pdf: ^3.11.1
+  file_picker: ^8.1.7
+  printing: ^5.13.1
+  share_plus: ^12.0.2
+
+  # Utilities
+  uuid: ^4.4.2
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  mockito: ^5.4.4
+  build_runner: ^2.4.11
+
+flutter:
+  uses-material-design: true
+  # Localization is hand-written (lib/core/localization) so the project
+  # builds with zero code-gen steps. See that folder to add more strings.
+
+  # assets:
+  #   - assets/images/

@@ -173,14 +173,11 @@ class SettingsScreen extends ConsumerWidget {
           duration: const Duration(seconds: 5),
         ),
       );
-    catch (_) 
-       } on UnsupportedError catch (e) {
-         if (context.mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? 'Not available yet')));
-         }
-       }
-
-	} catch (_) {
+    } on UnsupportedError catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? 'Not available yet')));
+      }
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.errorSomethingWentWrong)));
       }
@@ -193,7 +190,6 @@ class SettingsScreen extends ConsumerWidget {
     final locale = ref.watch(localeProvider);
     final themeMode = ref.watch(themeModeProvider);
     final currency = ref.watch(defaultCurrencyProvider);
-    final remindersEnabled = ref.watch(remindersEnabledProvider);
     final appLockEnabled = ref.watch(appLockEnabledProvider);
     final biometricEnabled = ref.watch(biometricEnabledProvider);
 
@@ -263,9 +259,9 @@ class SettingsScreen extends ConsumerWidget {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.enableReminders),
-              subtitle: kIsWeb ? const Text('Notifications aren\'t available in the browser version') : null,
-              value: remindersEnabled && !kIsWeb,
-              onChanged: kIsWeb ? null : (v) => _onToggleReminders(ref, v),
+              subtitle: const Text('Notification alerts aren\'t available in this build — reminders still save'),
+              value: false,
+              onChanged: null,
             ),
           ]),
           const SizedBox(height: 20),

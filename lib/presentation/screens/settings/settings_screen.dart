@@ -173,7 +173,14 @@ class SettingsScreen extends ConsumerWidget {
           duration: const Duration(seconds: 5),
         ),
       );
-    } catch (_) {
+    catch (_) 
+       } on UnsupportedError catch (e) {
+         if (context.mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? 'Not available yet')));
+         }
+       }
+
+	} catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.errorSomethingWentWrong)));
       }

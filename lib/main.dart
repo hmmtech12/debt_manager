@@ -8,7 +8,8 @@ import 'core/localization/app_localizations.dart';
 import 'core/localization/locale_provider.dart';
 import 'core/services/auth_service.dart';
 import 'core/services/notification_service.dart';
-import 'core/theme/app_theme.dart';import 'presentation/providers/debt_providers.dart';
+import 'core/theme/app_theme.dart';
+import 'presentation/providers/debt_providers.dart';
 import 'presentation/providers/settings_providers.dart';
 import 'presentation/screens/lock/lock_screen.dart';
 
@@ -24,8 +25,6 @@ class ShariahDebtManagerApp extends ConsumerStatefulWidget {
 }
 
 class _ShariahDebtManagerAppState extends ConsumerState<ShariahDebtManagerApp> {
-  bool? _locked; // null until we've checked whether app-lock is on
-
   @override
   void initState() {
     super.initState();
@@ -44,13 +43,14 @@ class _ShariahDebtManagerAppState extends ConsumerState<ShariahDebtManagerApp> {
     final hasPin = await AuthService.instance.hasPinSet();
     if (!mounted) return;
     ref.read(appLockEnabledProvider.notifier).state = hasPin;
-    setState(() => _locked = hasPin);
+    ref.read(isAppLockedProvider.notifier).state = hasPin;
   }
 
   @override
   Widget build(BuildContext context) {
     final locale = ref.watch(localeProvider);
     final AppThemeMode appThemeMode = ref.watch(themeModeProvider);
+    final isLocked = ref.watch(isAppLockedProvider);
 
     return MaterialApp.router(
       title: AppConstants.appName,
@@ -70,8 +70,8 @@ class _ShariahDebtManagerAppState extends ConsumerState<ShariahDebtManagerApp> {
         // Enforce RTL layout automatically for Arabic, LTR otherwise.
         return Directionality(
           textDirection: locale.languageCode == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-          child: (_locked ?? false)
-              ? LockScreen(onUnlocked: () => setState(() => _locked = false))
+          child: isLocked
+              ? LockScreen(onUnlocked: () => ref.read(isAppLockedProvider.notifier).state = false)
               : child!,
         );
       },

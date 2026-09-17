@@ -18,6 +18,24 @@ final debtRepositoryProvider = Provider<DebtRepository>((ref) {
   return DebtRepositoryImpl(AppDatabase.instance);
 });
 
+/// All known persons, for the Add Debt screen's "existing person"
+/// autocomplete. Kept separate from debtsProvider because a person can
+/// exist with zero active debts (e.g. all their debts were deleted).
+class PersonsNotifier extends AsyncNotifier<List<Person>> {
+  @override
+  Future<List<Person>> build() async {
+    final repo = ref.read(debtRepositoryProvider);
+    return repo.getAllPersons();
+  }
+
+  Future<void> refresh() async {
+    final repo = ref.read(debtRepositoryProvider);
+    state = await AsyncValue.guard(() => repo.getAllPersons());
+  }
+}
+
+final personsProvider = AsyncNotifierProvider<PersonsNotifier, List<Person>>(PersonsNotifier.new);
+
 /// Single source of truth for all debts (with joined person + payments).
 /// Screens watch this; mutating providers below call `.refresh()` after
 /// every write so the whole app stays in sync without manual plumbing.
@@ -34,18 +52,39 @@ class DebtsNotifier extends AsyncNotifier<List<DebtWithDetails>> {
     state = await AsyncValue.guard(() => repo.getAllDebts());
   }
 
-  Future<Person> _resolvePerson(String name, {String? phone}) async {
+  Future<Person> _resolvePerson(String name, {String? phone, String? email}) async {
     final repo = ref.read(debtRepositoryProvider);
     final existing = await repo.findPersonByName(name);
-    if (existing != null) return existing;
-    final person = Person(id: _uuid.v4(), name: name, phone: phone);
+    if (existing != null) {
+      // Fill in an email/phone we didn't have before, without
+      // overwriting anything already on record.
+      final needsEmail = (existing.email == null || existing.email!.isEmpty) && (email != null && email.isNotEmpty);
+      final needsPhone = (existing.phone == null || existing.phone!.isEmpty) && (phone != null && phone.isNotEmpty);
+      if (needsEmail || needsPhone) {
+        final updated = existing.copyWith(
+          email: needsEmail ? email : existing.email,
+          phone: needsPhone ? phone : existing.phone,
+        );
+        return repo.upsertPerson(updated);
+      }
+      return existing;
+    }
+    final person = Person(id: _uuid.v4(), name: name, phone: phone, email: email);
     return repo.upsertPerson(person);
   }
 
+  /// [existingPerson] — when set (the person was picked from the Add
+  /// Debt screen's autocomplete), that exact record is reused directly,
+  /// skipping name-based lookup entirely. This is what actually
+  /// guarantees no duplicate person rows, even if two people happen to
+  /// share a name — matching by the explicit selection, not by re-typed
+  /// text.
   Future<void> addDebt({
     required DebtType type,
+    Person? existingPerson,
     required String personName,
     String? personPhone,
+    String? personEmail,
     required double amount,
     required String currency,
     required DateTime debtDate,
@@ -53,7 +92,7 @@ class DebtsNotifier extends AsyncNotifier<List<DebtWithDetails>> {
     String? description,
   }) async {
     final repo = ref.read(debtRepositoryProvider);
-    final person = await _resolvePerson(personName, phone: personPhone);
+    final person = existingPerson ?? await _resolvePerson(personName, phone: personPhone, email: personEmail);
     final now = DateTime.now();
     final debt = Debt(
       id: _uuid.v4(),
@@ -69,6 +108,7 @@ class DebtsNotifier extends AsyncNotifier<List<DebtWithDetails>> {
     );
     await repo.addDebt(debt);
     await refresh();
+    await ref.read(personsProvider.notifier).refresh();
   }
 
   Future<void> recordPayment({

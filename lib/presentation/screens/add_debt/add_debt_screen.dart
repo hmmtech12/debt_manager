@@ -9,6 +9,7 @@ import '../../../core/localization/app_localizations.dart';
 import '../../../core/services/contacts_support.dart';
 import '../../../core/utils/date_formatter.dart';
 import '../../../domain/entities/enums.dart';
+import '../../../domain/entities/person.dart';
 import '../../providers/debt_providers.dart';
 import '../../providers/settings_providers.dart';
 import '../../widgets/primary_button.dart';
@@ -25,6 +26,7 @@ class _AddDebtScreenState extends ConsumerState<AddDebtScreen> {
   final _nameCtrl = TextEditingController();
   final _amountCtrl = TextEditingController();
   final _phoneCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
   final _refCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
 
@@ -34,11 +36,31 @@ class _AddDebtScreenState extends ConsumerState<AddDebtScreen> {
   DateTime? _dueDate;
   bool _saving = false;
 
+  /// Set only when the person picked an existing record from the
+  /// autocomplete dropdown below. Cleared automatically the moment they
+  /// edit the name away from that selection, so we never attach the
+  /// wrong person's id to a debt.
+  Person? _selectedPerson;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl.addListener(_onNameChanged);
+  }
+
+  void _onNameChanged() {
+    if (_selectedPerson != null && _nameCtrl.text != _selectedPerson!.name) {
+      setState(() => _selectedPerson = null);
+    }
+  }
+
   @override
   void dispose() {
+    _nameCtrl.removeListener(_onNameChanged);
     _nameCtrl.dispose();
     _amountCtrl.dispose();
     _phoneCtrl.dispose();
+    _emailCtrl.dispose();
     _refCtrl.dispose();
     _notesCtrl.dispose();
     super.dispose();
@@ -81,9 +103,13 @@ class _AddDebtScreenState extends ConsumerState<AddDebtScreen> {
     if (full == null || !mounted) return;
 
     setState(() {
+      _selectedPerson = null; // a phone contact isn't necessarily an existing app person
       _nameCtrl.text = full.displayName;
       if (full.phones.isNotEmpty) {
         _phoneCtrl.text = full.phones.first.number;
+      }
+      if (full.emails.isNotEmpty) {
+        _emailCtrl.text = full.emails.first.address;
       }
     });
   }
@@ -102,8 +128,10 @@ class _AddDebtScreenState extends ConsumerState<AddDebtScreen> {
       final amount = double.parse(_amountCtrl.text.replaceAll(',', '.'));
       await ref.read(debtsProvider.notifier).addDebt(
             type: _type,
+            existingPerson: _selectedPerson,
             personName: _nameCtrl.text.trim(),
             personPhone: _phoneCtrl.text.trim().isEmpty ? null : _phoneCtrl.text.trim(),
+            personEmail: _emailCtrl.text.trim().isEmpty ? null : _emailCtrl.text.trim(),
             amount: amount,
             currency: _currency ?? ref.read(defaultCurrencyProvider),
             debtDate: _debtDate,
@@ -128,6 +156,7 @@ class _AddDebtScreenState extends ConsumerState<AddDebtScreen> {
     final theme = Theme.of(context);
     final defaultCurrency = ref.watch(defaultCurrencyProvider);
     _currency ??= defaultCurrency;
+    final knownPersons = ref.watch(personsProvider).valueOrNull ?? const <Person>[];
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.addDebt)),
@@ -162,21 +191,35 @@ class _AddDebtScreenState extends ConsumerState<AddDebtScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            TextFormField(
-              controller: _nameCtrl,
-              decoration: InputDecoration(
-                labelText: l10n.personName,
-                prefixIcon: const Icon(Icons.person_outline_rounded),
-                suffixIcon: !contactsPickerSupported
-                    ? null
-                    : IconButton(
-                        tooltip: l10n.pickFromContacts,
-                        icon: const Icon(Icons.contacts_outlined),
-                        onPressed: _pickContact,
-                      ),
-              ),
+            _PersonAutocomplete(
+              nameController: _nameCtrl,
+              knownPersons: knownPersons,
+              selectedPerson: _selectedPerson,
               validator: (v) => (v == null || v.trim().isEmpty) ? l10n.errorPersonNameRequired : null,
+              pickFromContactsLabel: l10n.pickFromContacts,
+              personNameLabel: l10n.personName,
+              onContactsPressed: contactsPickerSupported ? _pickContact : null,
+              onPersonSelected: (p) {
+                setState(() {
+                  _selectedPerson = p;
+                  _phoneCtrl.text = p.phone ?? '';
+                  _emailCtrl.text = p.email ?? '';
+                });
+              },
             ),
+            if (_selectedPerson != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.owedToMe),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Using existing person — no duplicate will be created',
+                    style: theme.textTheme.bodySmall?.copyWith(color: AppColors.owedToMe),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 14),
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -237,6 +280,12 @@ class _AddDebtScreenState extends ConsumerState<AddDebtScreen> {
             ),
             const SizedBox(height: 14),
             TextFormField(
+              controller: _emailCtrl,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'Email (optional)', prefixIcon: Icon(Icons.email_outlined)),
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
               controller: _refCtrl,
               decoration: InputDecoration(labelText: l10n.referenceOptional, prefixIcon: const Icon(Icons.tag_rounded)),
             ),
@@ -251,6 +300,104 @@ class _AddDebtScreenState extends ConsumerState<AddDebtScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Wraps [Autocomplete] with our own styling and an external
+/// [nameController] so the rest of the screen (validation, the contacts
+/// picker) keeps working with a single, familiar TextEditingController.
+class _PersonAutocomplete extends StatelessWidget {
+  final TextEditingController nameController;
+  final List<Person> knownPersons;
+  final Person? selectedPerson;
+  final String? Function(String?) validator;
+  final String pickFromContactsLabel;
+  final String personNameLabel;
+  final VoidCallback? onContactsPressed;
+  final ValueChanged<Person> onPersonSelected;
+
+  const _PersonAutocomplete({
+    required this.nameController,
+    required this.knownPersons,
+    required this.selectedPerson,
+    required this.validator,
+    required this.pickFromContactsLabel,
+    required this.personNameLabel,
+    required this.onContactsPressed,
+    required this.onPersonSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Autocomplete<Person>(
+      textEditingController: nameController,
+      optionsBuilder: (TextEditingValue value) {
+        final query = value.text.trim().toLowerCase();
+        if (query.isEmpty) return const Iterable<Person>.empty();
+        return knownPersons.where((p) {
+          final nameMatch = p.name.toLowerCase().contains(query);
+          final emailMatch = p.email?.toLowerCase().contains(query) ?? false;
+          return nameMatch || emailMatch;
+        });
+      },
+      displayStringForOption: (p) => p.name,
+      onSelected: onPersonSelected,
+      fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+        return TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          onFieldSubmitted: (_) => onFieldSubmitted(),
+          decoration: InputDecoration(
+            labelText: personNameLabel,
+            prefixIcon: const Icon(Icons.person_outline_rounded),
+            suffixIcon: onContactsPressed == null
+                ? null
+                : IconButton(
+                    tooltip: pickFromContactsLabel,
+                    icon: const Icon(Icons.contacts_outlined),
+                    onPressed: onContactsPressed,
+                  ),
+          ),
+          validator: validator,
+        );
+      },
+      optionsViewBuilder: (context, onSelected, options) {
+        final optionsList = options.toList();
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            elevation: 4,
+            borderRadius: BorderRadius.circular(14),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 240, minWidth: 280),
+              child: ListView.separated(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                shrinkWrap: true,
+                itemCount: optionsList.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final p = optionsList[index];
+                  return ListTile(
+                    dense: true,
+                    leading: CircleAvatar(
+                      radius: 16,
+                      child: Text(p.name.isNotEmpty ? p.name[0].toUpperCase() : '?', style: const TextStyle(fontSize: 13)),
+                    ),
+                    title: Text(p.name),
+                    subtitle: (p.email != null && p.email!.isNotEmpty)
+                        ? Text(p.email!, maxLines: 1, overflow: TextOverflow.ellipsis)
+                        : (p.phone != null && p.phone!.isNotEmpty)
+                            ? Text(p.phone!, maxLines: 1, overflow: TextOverflow.ellipsis)
+                            : null,
+                    onTap: () => onSelected(p),
+                  );
+                },
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

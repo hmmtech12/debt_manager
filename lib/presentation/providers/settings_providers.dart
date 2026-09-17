@@ -11,3 +11,5 @@ final appLockEnabledProvider = StateProvider<bool>((ref) => false);
 final biometricEnabledProvider = StateProvider<bool>((ref) => false);
 
 final userNameProvider = StateProvider<String>((ref) => '');
+
+final isAppLockedProvider = StateProvider<bool>((ref) => false);

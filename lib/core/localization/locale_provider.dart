@@ -18,7 +18,7 @@ final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>((ref) {
 enum AppThemeMode { light, dark, system }
 
 class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
-  ThemeModeNotifier() : super(AppThemeMode.system);
+  ThemeModeNotifier() : super(AppThemeMode.light);
 
   void setMode(AppThemeMode mode) => state = mode;
 

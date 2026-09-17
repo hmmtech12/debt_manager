@@ -280,6 +280,18 @@ class SettingsScreen extends ConsumerWidget {
               value: biometricEnabled,
               onChanged: null,
             ),
+            const Divider(height: 1),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.logout_rounded, color: appLockEnabled ? AppColors.overdue : null),
+              title: Text(
+                'Log Out',
+                style: TextStyle(color: appLockEnabled ? AppColors.overdue : null),
+              ),
+              subtitle: appLockEnabled ? null : const Text('Set a PIN above first'),
+              enabled: appLockEnabled,
+              onTap: appLockEnabled ? () => ref.read(isAppLockedProvider.notifier).state = true : null,
+            ),
           ]),
           const SizedBox(height: 20),
           _SectionLabel(l10n.data),

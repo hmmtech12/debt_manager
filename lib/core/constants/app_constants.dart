@@ -25,13 +25,14 @@ class AppConstants {
     'OTHER',
   ];
 
+
   static const String shariahDisclaimer =
       'This application is a debt-recording and management tool. It does '
       'not provide a formal Shariah ruling or financial advice. Consult a '
       'qualified scholar for specific Islamic finance questions.';
 
   static const String qardHasanNote =
-      'This app follows the spirit of Qard Hasan (a benevolent, '
+      'This app follows the spirit of Haja Moinudeen (a benevolent, '
       'interest-free loan). It never calculates interest, APR, or late '
       'payment penalties — only principal, repayments, and the agreed '
       'due date.';

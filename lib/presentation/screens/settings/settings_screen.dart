@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/app_colors.dart';
@@ -117,6 +118,18 @@ class SettingsScreen extends ConsumerWidget {
     }
   }
 
+  /// Locks the app (so a PIN/biometric prompt is required next time) and
+  /// closes it — on Android, `SystemNavigator.pop()` exits the app the
+  /// same way pressing the system back button from the home screen
+  /// would. Setting the lock state first is a safety net: on platforms
+  /// where the app doesn't actually close (e.g. iOS won't let an app
+  /// programmatically quit itself), reopening it still shows the lock
+  /// screen instead of the unlocked app.
+  Future<void> _logOut(WidgetRef ref) async {
+    ref.read(isAppLockedProvider.notifier).state = true;
+    await SystemNavigator.pop();
+  }
+
   Future<void> _onToggleBiometric(BuildContext context, WidgetRef ref, bool enable) async {
     if (enable) {
       final available = await AuthService.instance.isBiometricAvailable();
@@ -129,6 +142,7 @@ class SettingsScreen extends ConsumerWidget {
         return;
       }
     }
+    await AuthService.instance.setBiometricEnabled(enable);
     ref.read(biometricEnabledProvider.notifier).state = enable;
   }
 
@@ -290,7 +304,7 @@ class SettingsScreen extends ConsumerWidget {
               ),
               subtitle: appLockEnabled ? null : const Text('Set a PIN above first'),
               enabled: appLockEnabled,
-              onTap: appLockEnabled ? () => ref.read(isAppLockedProvider.notifier).state = true : null,
+              onTap: appLockEnabled ? () => _logOut(ref) : null,
             ),
           ]),
           const SizedBox(height: 20),
@@ -332,9 +346,17 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           _SectionLabel(l10n.about),
           _SettingsCard(children: [
-            ListTile(contentPadding: EdgeInsets.zero, title: Text(l10n.privacyPolicy), onTap: () {}),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.privacyPolicy),
+              onTap: () => _showTextDialog(context, l10n.privacyPolicy, AppConstants.privacyPolicyText),
+            ),
             const Divider(height: 1),
-            ListTile(contentPadding: EdgeInsets.zero, title: Text(l10n.terms), onTap: () {}),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.terms),
+              onTap: () => _showTextDialog(context, l10n.terms, AppConstants.termsText),
+            ),
             const Divider(height: 1),
             ListTile(
               contentPadding: EdgeInsets.zero,
@@ -378,6 +400,20 @@ class SettingsScreen extends ConsumerWidget {
           child: Text('${AppConstants.shariahDisclaimer}\n\n${AppConstants.qardHasanNote}'),
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.confirm))],
+      ),
+    );
+  }
+
+  /// Shared dialog for Privacy Policy / Terms — the actual text lives in
+  /// AppConstants (privacyPolicyText / termsText); edit those constants
+  /// directly to put your own content in.
+  void _showTextDialog(BuildContext context, String title, String body) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: SingleChildScrollView(child: Text(body)),
+        actions: [TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))],
       ),
     );
   }

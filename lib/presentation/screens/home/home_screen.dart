@@ -117,7 +117,7 @@ class HomeScreen extends ConsumerWidget {
                           amountText: CurrencyFormatter.format(summary.totalIOwe, currency),
                           accentColor: AppColors.iOwe,
                           icon: Icons.call_made_rounded,
-                          onTap: () => context.push('/person/${item.person.id}'),
+                          onTap: () => context.push('/debts?tab=pay'),
                         ),
                       ),
                     ],
@@ -212,7 +212,7 @@ class _UpcomingTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
-        onTap: () => context.push('/debt/${item.debt.id}'),
+        onTap: () => context.push('/person/${item.person.id}'),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

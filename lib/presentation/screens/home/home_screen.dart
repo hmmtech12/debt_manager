@@ -86,8 +86,12 @@ class HomeScreen extends ConsumerWidget {
                         ),
                       ),
                       IconButton(
-                        onPressed: () => context.push('/settings'),
-                        icon: const Icon(Icons.notifications_none_rounded),
+                        onPressed: () => _showRemindersSheet(context, upcoming, l10n),
+                        icon: Badge(
+                          isLabelVisible: upcoming.isNotEmpty,
+                          smallSize: 8,
+                          child: const Icon(Icons.notifications_none_rounded),
+                        ),
                         style: IconButton.styleFrom(
                           backgroundColor: theme.cardTheme.color,
                           shape: RoundedRectangleBorder(
@@ -164,6 +168,66 @@ class HomeScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Bottom sheet the bell icon opens — a quick look at what's due soon,
+/// without leaving Home. Each row jumps to that person's full page.
+void _showRemindersSheet(BuildContext context, List<DebtWithDetails> upcoming, AppLocalizations l10n) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+    builder: (ctx) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.upcomingDueDates, style: Theme.of(ctx).textTheme.titleLarge),
+              const SizedBox(height: 12),
+              if (upcoming.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: Text('Nothing due right now', style: Theme.of(ctx).textTheme.bodyMedium)),
+                )
+              else
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxHeight: MediaQuery.of(ctx).size.height * 0.5),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: upcoming.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final item = upcoming[index];
+                      final overdue = item.status == DebtStatus.overdue;
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Icon(
+                          overdue ? Icons.error_rounded : Icons.schedule_rounded,
+                          color: overdue ? AppColors.overdue : AppColors.neutral,
+                        ),
+                        title: Text(item.person.name),
+                        subtitle: Text(DateFormatter.medium(item.debt.dueDate)),
+                        trailing: Text(
+                          CurrencyFormatter.format(item.remainingAmount, item.debt.currency),
+                          style: Theme.of(ctx).textTheme.titleSmall,
+                        ),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          GoRouter.of(context).push('/person/${item.person.id}');
+                        },
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class _SectionHeader extends StatelessWidget {

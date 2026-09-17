@@ -276,9 +276,9 @@ class SettingsScreen extends ConsumerWidget {
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(l10n.biometricUnlock),
-              subtitle: const Text('Not available in this build — use your PIN'),
+              subtitle: appLockEnabled ? null : const Text('Set a PIN above first'),
               value: biometricEnabled,
-              onChanged: null,
+              onChanged: appLockEnabled ? (v) => _onToggleBiometric(context, ref, v) : null,
             ),
             const Divider(height: 1),
             ListTile(

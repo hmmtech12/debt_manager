@@ -2,20 +2,21 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:local_auth/local_auth.dart';
 
-/// Handles the app-lock PIN. The PIN itself is never stored in
-/// plaintext — only its salted hash goes into secure storage, which on
-/// Android backs onto the Keystore, on iOS the Keychain, on desktop the
-/// OS credential store, and on web the browser's own encrypted storage.
-/// PIN lock therefore works everywhere.
+/// Handles the app-lock PIN and biometric unlock. The PIN itself is
+/// never stored in plaintext — only its salted hash goes into secure
+/// storage, which on Android backs onto the Keystore, on iOS the
+/// Keychain, on desktop the OS credential store, and on web the
+/// browser's own encrypted storage.
 ///
-/// Biometric unlock (`local_auth`) was deliberately removed: its Windows
-/// implementation pulls in a NuGet package at build time, which fails on
-/// machines without unrestricted internet/firewall access to nuget.org —
-/// a bad trade-off for a "nice to have" unlock shortcut. [isBiometricAvailable]
-/// always returns false, so the UI falls back to the PIN pad everywhere;
-/// re-adding `local_auth` later is a self-contained change confined to
-/// this file plus the Settings toggle.
+/// Note: `local_auth`'s Windows implementation needs a NuGet download
+/// during the build, which fails on networks that block/intercept
+/// nuget.org (as we hit earlier). That only affects `flutter build
+/// windows` — it has no effect on Android builds (Codemagic's Android
+/// workflow never touches the Windows plugin implementation at all). If
+/// a Windows build is ever needed again on a restricted network, this
+/// dependency is the first thing to remove.
 class AuthService {
   AuthService._internal();
   static final AuthService instance = AuthService._internal();
@@ -26,6 +27,7 @@ class AuthService {
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
+  final LocalAuthentication _localAuth = LocalAuthentication();
 
   Future<bool> hasPinSet() async {
     final hash = await _storage.read(key: _pinHashKey);
@@ -56,9 +58,29 @@ class AuthService {
     return sha256.convert(bytes).toString();
   }
 
-  // ---------------- Biometrics (disabled — see class doc) ----------------
+  // ---------------- Biometrics ----------------
 
-  Future<bool> isBiometricAvailable() async => false;
+  Future<bool> isBiometricAvailable() async {
+    try {
+      final canCheck = await _localAuth.canCheckBiometrics;
+      final isSupported = await _localAuth.isDeviceSupported();
+      return canCheck && isSupported;
+    } catch (_) {
+      return false;
+    }
+  }
 
-  Future<bool> authenticateWithBiometrics({String reason = 'Unlock Debt Manager'}) async => false;
+  Future<bool> authenticateWithBiometrics({String reason = 'Unlock Debt Manager'}) async {
+    try {
+      return await _localAuth.authenticate(
+        localizedReason: reason,
+        options: const AuthenticationOptions(
+          biometricOnly: false, // allow device PIN/pattern as fallback
+          stickyAuth: true,
+        ),
+      );
+    } catch (_) {
+      return false;
+    }
+  }
 }

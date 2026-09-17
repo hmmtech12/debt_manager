@@ -76,7 +76,7 @@ class AuthService {
         localizedReason: reason,
         options: const AuthenticationOptions(
           biometricOnly: false, // allow device PIN/pattern as fallback
-          stickyAuth: true,
+          stickyAuth: false,
         ),
       );
     } catch (_) {

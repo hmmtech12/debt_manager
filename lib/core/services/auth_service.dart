@@ -23,6 +23,7 @@ class AuthService {
 
   static const _pinHashKey = 'app_lock_pin_hash';
   static const _pinSaltKey = 'app_lock_pin_salt';
+  static const _biometricEnabledKey = 'biometric_enabled';
 
   final FlutterSecureStorage _storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -51,6 +52,19 @@ class AuthService {
   Future<void> clearPin() async {
     await _storage.delete(key: _pinHashKey);
     await _storage.delete(key: _pinSaltKey);
+    await setBiometricEnabled(false); // no PIN means no biometric fallback either
+  }
+
+  /// Whether biometric unlock should be offered on the lock screen —
+  /// persisted, unlike simply holding this in a Riverpod StateProvider,
+  /// so it survives an app restart the same way the PIN itself does.
+  Future<bool> isBiometricEnabled() async {
+    final value = await _storage.read(key: _biometricEnabledKey);
+    return value == 'true';
+  }
+
+  Future<void> setBiometricEnabled(bool enabled) async {
+    await _storage.write(key: _biometricEnabledKey, value: enabled.toString());
   }
 
   String _hash(String pin, String salt) {

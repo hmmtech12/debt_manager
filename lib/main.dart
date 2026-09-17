@@ -36,13 +36,15 @@ class _ShariahDebtManagerAppState extends ConsumerState<ShariahDebtManagerApp> {
   }
 
   /// A PIN, once set, lives in secure storage and survives app restarts —
-  /// but `appLockEnabledProvider` is just in-memory Riverpod state, so on
-  /// a cold start we re-derive the real lock state from storage itself
-  /// rather than trusting the provider's default (false).
+  /// but `appLockEnabledProvider` (and `biometricEnabledProvider`) are
+  /// just in-memory Riverpod state, so on a cold start we re-derive both
+  /// from storage itself rather than trusting their defaults (false).
   Future<void> _checkAppLock() async {
     final hasPin = await AuthService.instance.hasPinSet();
+    final biometricEnabled = hasPin && await AuthService.instance.isBiometricEnabled();
     if (!mounted) return;
     ref.read(appLockEnabledProvider.notifier).state = hasPin;
+    ref.read(biometricEnabledProvider.notifier).state = biometricEnabled;
     ref.read(isAppLockedProvider.notifier).state = hasPin;
   }
 

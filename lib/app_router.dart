@@ -8,6 +8,7 @@ import 'presentation/screens/debt_details/debt_details_screen.dart';
 import 'presentation/screens/debts/debts_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'presentation/screens/onboarding/onboarding_screen.dart';
+import 'presentation/screens/person_detail/person_detail_screen.dart';
 import 'presentation/screens/record_payment/record_payment_screen.dart';
 import 'presentation/screens/reports/reports_screen.dart';
 import 'presentation/screens/settings/settings_screen.dart';
@@ -36,6 +37,9 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/debt/:id/record-payment',
       builder: (context, state) => RecordPaymentScreen(debtId: state.pathParameters['id']!),
+    ),    GoRoute(
+      path: '/person/:id',
+      builder: (context, state) => PersonDetailScreen(personId: state.pathParameters['id']!),
     ),
 
     // Shell (bottom-nav) routes.

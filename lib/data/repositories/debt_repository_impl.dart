@@ -33,9 +33,14 @@ class DebtRepositoryImpl implements DebtRepository {
   }
 
   @override
-  Future<Person?> findPersonByName(String name) async {
+    Future<Person?> findPersonByName(String name) async {
     final db = await _db;
-    final rows = await db.query('persons', where: 'name = ?', whereArgs: [name], limit: 1);
+    final rows = await db.query(
+      'persons',
+      where: 'LOWER(TRIM(name)) = ?',
+      whereArgs: [name.trim().toLowerCase()],
+      limit: 1,
+    );
     if (rows.isEmpty) return null;
     return Person.fromMap(rows.first);
   }

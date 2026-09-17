@@ -232,7 +232,7 @@ class _DebtListView extends StatelessWidget {
       separatorBuilder: (_, __) => const SizedBox(height: 10),
       itemBuilder: (context, i) {
         final item = items[i];
-        return DebtCard(item: item, onTap: () => context.push('/debt/${item.debt.id}'));
+        return DebtCard(item: item, onTap: () => context.push('/person/${item.person.id}'));
       },
     );
   }

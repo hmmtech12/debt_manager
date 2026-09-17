@@ -1,7 +1,7 @@
 class AppConstants {
   AppConstants._();
 
-  static const String appName = 'Debt Manager';
+  static const String appName = 'Easy Debt Manager';
 
   /// Supported currencies. AED is first/default for UAE users.
   static const List<String> currencies = [

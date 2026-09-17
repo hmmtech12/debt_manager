@@ -152,7 +152,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
                   ...selectedItems.map((item) => Card(
                         margin: const EdgeInsets.only(bottom: 8),
                         child: ListTile(
-                          onTap: () => context.push('/debt/${item.debt.id}'),
+                          onTap: () => context.push('/person/${item.person.id}'),
                           title: Text(item.person.name),
                           subtitle: Text(item.debt.type == DebtType.lent ? l10n.iLentMoney : l10n.iBorrowedMoney),
                           trailing: Text(

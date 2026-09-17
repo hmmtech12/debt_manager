@@ -117,7 +117,7 @@ class HomeScreen extends ConsumerWidget {
                           amountText: CurrencyFormatter.format(summary.totalIOwe, currency),
                           accentColor: AppColors.iOwe,
                           icon: Icons.call_made_rounded,
-                          onTap: () => context.push('/debts?tab=pay'),
+                          onTap: () => context.push('/person/${item.person.id}'),
                         ),
                       ),
                     ],
